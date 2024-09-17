@@ -70,13 +70,21 @@ pub enum BinaryOpType {
 pub enum Statement {
     Expression(Expression),
     FunctionDeclaration(FunDeclaration),
-    // CalssDeclaration(ClassDecl),
+    CalssDeclaration(ClassDecl),
     If(Expression, Box<Statement>, Option<Box<Statement>>),
     Print(Expression),
     LetDeclaration(Symbol, Option<Expression>),
     Block(Vec<Statement>),
     Return(SourceLocation, Option<Expression>),
     While(Expression, Vec<Statement>),
+}
+
+#[derive(Debug)]
+pub struct ClassDecl {
+    pub name: Symbol,
+    pub superclass: Option<Symbol>,
+    pub methods: Vec<FunDeclaration>,
+    pub properties: Vec<Statement>,
 }
 
 #[derive(Debug)]

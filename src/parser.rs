@@ -251,7 +251,62 @@ impl Parser {
                 self.function_declaration(FunctionKind::Function)?,
             ));
         }
+        if self.match_token(TokenType::Class) {
+            return self.class_declaration();
+        }
         self.statement()
+    }
+
+    fn class_declaration(&mut self) -> Result<Statement, Error> {
+        let name_tok = self
+            .consume(TokenType::Ident, "Expected class name")?
+            .clone();
+
+        let class_symbol = expressions::Symbol {
+            line: name_tok.line,
+            column: name_tok.column,
+            name: String::from_utf8(name_tok.lexeme).unwrap(),
+        };
+
+        let superclass_maybe = if self.match_token(TokenType::LT) {
+            let superclass_tok = self.consume(TokenType::Ident, "Expected superclass name")?;
+            Some(expressions::Symbol {
+                line: superclass_tok.line,
+                column: superclass_tok.column,
+                name: String::from_utf8(superclass_tok.lexeme).unwrap(),
+            })
+        } else {
+            None
+        };
+
+        self.consume(TokenType::LBrace, "Expected '{' before class body")?;
+
+        let mut methods = Vec::new();
+        let mut properties = Vec::new();
+        while !self.check(TokenType::RBrace) && self.cur_token < self.tokens.len() {
+            let statement_tok = self.peek().clone();
+            if self.match_token(TokenType::Function) {
+                methods.push(self.function_declaration(FunctionKind::Method)?);
+            } else if self.match_token(TokenType::Let) {
+                properties.push(self.let_declaration()?);
+            } else {
+                return Err(Error::TokenMismatch {
+                    expected: TokenType::Function,
+                    found: statement_tok,
+                    maybe_on_err_string: Some("Expected method or property declaration".into()),
+                });
+            }
+        }
+        let methods = methods;
+        let properties = properties;
+
+        self.consume(TokenType::RBrace, "Expected '}' after class body")?;
+        Ok(Statement::CalssDeclaration(expressions::ClassDecl {
+            name: class_symbol,
+            superclass: superclass_maybe,
+            methods,
+            properties,
+        }))
     }
 
     fn function_declaration(
@@ -392,9 +447,17 @@ impl Parser {
     }
 
     fn print_statement(&mut self) -> Result<Statement, Error> {
-        self.consume(TokenType::LParen, "Expected '(' after 'print'")?;
-        let expr = self.expression()?;
-        self.consume(TokenType::RParen, "Expected ')' after expression")?;
+        let expr = match self.expression() {
+            Ok(e) => e,
+            Err(_) => {
+                return Err(Error::TokenMismatch {
+                    expected: TokenType::Semicolon,
+                    found: self.peek(),
+                    maybe_on_err_string: Some("Expected expression after 'print'".into()),
+                })
+            }
+        };
+
         self.consume(TokenType::Semicolon, "Expected ';' after expression")?;
         Ok(Statement::Print(expr))
     }
@@ -1004,6 +1067,34 @@ impl Parser {
                 Statement::Print(expr) => {
                     println!("Print(");
                     print_expression(expr, indent + 1);
+                    print_indent(indent);
+                    println!(")");
+                }
+                Statement::CalssDeclaration(class_decl) => {
+                    println!("ClassDeclaration(");
+                    print_indent(indent + 1);
+                    println!("name: {}", class_decl.name.name);
+                    if let Some(superclass) = class_decl.superclass {
+                        print_indent(indent + 1);
+                        println!("superclass: {}", superclass.name);
+                    }
+                    for property in class_decl.properties {
+                        print_indent(indent + 1);
+                        println!("properties(");
+                        print_node(property, indent + 2);
+                        print_indent(indent + 1);
+                        println!(")");
+                    }
+                    for method in class_decl.methods {
+                        print_node(
+                            Statement::FunctionDeclaration(expressions::FunDeclaration {
+                                name: method.name,
+                                parameters: method.parameters,
+                                body: method.body,
+                            }),
+                            indent + 1,
+                        );
+                    }
                     print_indent(indent);
                     println!(")");
                 }

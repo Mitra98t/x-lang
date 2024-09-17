@@ -1,6 +1,6 @@
-// Title: Lexer
-// Desc: The lexer is responsible for reading the input and returning tokens.
-// Expected: The lexer should return the tokens for the input string.
+//! Title: Lexer
+//! Desc: The lexer is responsible for reading the input and returning tokens.
+//! Expected: The lexer should return the tokens for the input string.
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
@@ -35,6 +35,7 @@ pub enum TokenType {
     LBrace,
     RBrace,
     // Keywords
+    Class,
     Function,
     Let,
     True,
@@ -131,7 +132,7 @@ impl Lexer {
     /// TODO: symbols like _ should be allowed in identifiers.
     fn read_identifier(&mut self) -> String {
         let position = self.position;
-        while self.ch.is_alphanumeric() {
+        while self.ch.is_alphanumeric() || self.ch == '_' {
             self.read_char();
         }
         self.back_one_char();
@@ -221,7 +222,7 @@ impl Lexer {
             ']' => TokenType::RSquare,
             '\0' => TokenType::EOF,
             _ => {
-                if self.ch.is_alphabetic() {
+                if self.ch.is_alphabetic() || self.ch == '_' {
                     let ident = self.read_identifier();
                     match ident.as_str() {
                         "fn" => TokenType::Function,
@@ -234,6 +235,7 @@ impl Lexer {
                         "while" => TokenType::While,
                         "return" => TokenType::Return,
                         "null" => TokenType::Nil,
+                        "class" => TokenType::Class,
                         "print" => TokenType::Print,
                         _ => {
                             literal_value = Some(Literal::Ident(ident.clone()));

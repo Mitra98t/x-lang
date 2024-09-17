@@ -7,15 +7,19 @@ mod parser;
 
 fn main() {
     let inputs = vec![["
-fn succ(x ) {
-    return x + 1;
+class Person < Object {
+    let age = 3;
+
+    fn new(age) {
+        age = age;
+    }
+    fn get_age() {
+        print age;
+    }
 }
 
-while (x < 10) {
-    x = succ(x);
-}
-
-print(x);
+let p = Person.new(15);
+p.get_age();
 "]];
 
     for input_str in inputs.iter().flatten() {
@@ -24,10 +28,10 @@ print(x);
 
         println!("{input}");
         let tok_list: Vec<lexer::Token> = l.run();
-        println!("Tokens:");
-        tok_list.clone().into_iter().for_each(|tok| {
-            println!("{:?}", tok);
-        });
+        // println!("Tokens:");
+        // tok_list.clone().into_iter().for_each(|tok| {
+        //     println!("{:?}", tok);
+        // });
 
         let mut p = parser::Parser::new(tok_list);
         let nodes = p.parse();
